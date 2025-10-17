@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Finance Control Pro - Dashboard</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+
+    <style>
+      :root {
+        --bg: #111827;
+        --card-bg: #1f2937;
+        --text-primary: #f9fafb;
+        --text-secondary: #9ca3af;
+        --border-color: #374151;
+        --accent: #facc15;
+        --accent-text: #18181b;
+      }
+
+      .light-mode {
+        --bg: #f3f4f6;
+        --card-bg: #ffffff;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --border-color: #e5e7eb;
+        --accent: #f59e0b;
+        --accent-text: #ffffff;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg);
+        color: var(--text-secondary);
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+        transition: background-color 0.3s, border-color 0.3s;
+      }
+
+      .chart-btn {
+        color: var(--accent);
+      }
+
+      .chart-btn.active {
+        background-color: var(--accent);
+        color: var(--accent-text);
+        box-shadow: 0 4px 14px 0 rgba(250, 204, 21, 0.2);
+      }
+
+      .sidebar-link.active {
+        background-color: rgba(250, 204, 21, 0.1);
+        border-left: 3px solid var(--accent);
+        color: var(--text-primary);
+      }
+
+      .toast {
+        transition: opacity 0.3s, transform 0.3s;
+      }
+
+      /* Toggle Switch Style */
+      .toggle-checkbox:checked + .toggle-label {
+        background-color: var(--accent);
+      }
+      .toggle-checkbox:checked + .toggle-label .toggle-ball {
+        transform: translateX(100%);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      <div class="max-w-md w-full bg-zinc-800 p-8 rounded-2xl border border-zinc-700 shadow-lg">
+        <div id="login-view">
+          <h2 class="text-2xl font-bold text-yellow-400 text-center mb-2">Bem-vindo de volta!</h2>
+          <p class="text-center text-gray-400 mb-6">Acesse seu dashboard.</p>
+          <form id="login-form" class="space-y-4">
+            <input id="login-email" type="email" placeholder="Email" required class="w-full bg-zinc-900 border border-zinc-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-yellow-400 outline-none" />
+            <input id="login-password" type="password" placeholder="Senha" required class="w-full bg-zinc-900 border border-zinc-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-yellow-400 outline-none" />
+            <button type="submit" class="w-full bg-yellow-400 text-zinc-900 font-bold py-3 rounded-lg hover:bg-yellow-500 transition duration-300">Entrar</button>
+          </form>
+          <p class="text-sm text-center text-gray-400 mt-4">Não tem uma conta? <button id="show-register-btn" class="font-semibold text-yellow-400 hover:underline">Cadastre-se</button></p>
+        </div>
+        <div id="register-view" class="hidden">
+          <h2 class="text-2xl font-bold text-yellow-400 text-center mb-2">Crie sua Conta</h2>
+          <p class="text-center text-gray-400 mb-6">É rápido e fácil.</p>
+          <form id="register-form" class="space-y-4">
+            <input id="reg-name" type="text" placeholder="Nome completo" required class="w-full bg-zinc-900 border border-zinc-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-yellow-400 outline-none" />
+            <input id="reg-email" type="email" placeholder="Email" required class="w-full bg-zinc-900 border border-zinc-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-yellow-400 outline-none" />
+            <input id="reg-password" type="password" placeholder="Senha" required class="w-full bg-zinc-900 border border-zinc-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-yellow-400 outline-none" />
+            <button type="submit" class="w-full bg-yellow-400 text-zinc-900 font-bold py-3 rounded-lg hover:bg-yellow-500 transition duration-300">Criar Conta</button>
+          </form>
+          <p class="text-center text-xs text-gray-500 mt-3">Atenção: Os dados são salvos localmente em seu navegador apenas para fins de demonstração.</p>
+          <p class="text-sm text-center text-gray-400 mt-4">Já tem uma conta? <button id="show-login-btn" class="font-semibold text-yellow-400 hover:underline">Faça Login</button></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden md:flex min-h-screen">
+      <!-- Sidebar -->
+      <aside class="w-64 card p-4 border-r flex flex-col">
+        <div class="mb-8 px-2">
+          <h1 class="text-xl font-extrabold text-yellow-400">Finance Pro</h1>
+          <p class="text-xs">Análise de Performance</p>
+        </div>
+
+        <nav class="flex flex-col gap-2">
+          <a href="#dashboard" data-tab="dashboard" class="sidebar-link active flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-700">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="#simulator" data-tab="simulator" class="sidebar-link flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-700">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+            <span>Simulador</span>
+          </a>
+          <a href="#reports" data-tab="reports" class="sidebar-link flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-700">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0113 2.414L16.586 6A2 2 0 0117 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm5 2V3.586L6.586 6H9zm-2 5a1 1 0 100 2h4a1 1 0 100-2H7zm-2 4a1 1 0 100 2h4a1 1 0 100-2H5z" clip-rule="evenodd"></path>
+            </svg>
+            <span>Relatórios</span>
+          </a>
+          <a href="#profile" data-tab="profile" class="sidebar-link flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-700">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"></path></svg>
+            <span>Perfil</span>
+          </a>
+        </nav>
+
+        <div class="mt-auto">
+          <button id="logout-btn" class="w-full flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/10">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path>
+            </svg>
+            <span>Sair</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+        <header class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+          <div class="flex items-center gap-4">
+            <div>
+              <h2 id="page-title" class="text-2xl font-bold" style="color: var(--text-primary)">Dashboard</h2>
+              <p id="welcome-message" class="text-sm">Olá, bem-vindo(a) de volta!</p>
+              <p id="last-updated" class="text-xs mt-1">Última atualização: —</p>
+            </div>
+            <select id="year-select" class="bg-zinc-900 border border-zinc-700 p-2 rounded-lg text-sm appearance-none" style="color: var(--text-primary); background-color: var(--card-bg); border-color: var(--border-color)">
+              <option value="2025">2025</option>
+              <option value="2024" selected>2024</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+
+          <div class="flex gap-3">
+            <button id="export-pdf" class="font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300" style="background-color: var(--accent); color: var(--accent-text)">
+              <svg id="pdf-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm6 12v-5H8l4-4 4 4h-2v5h-4z" clip-rule="evenodd"></path></svg>
+              <svg id="pdf-spinner" class="animate-spin -ml-1 mr-2 h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span id="pdf-button-text">Exportar PDF</span>
+            </button>
+            <button id="export-csv" class="card border font-semibold py-2 px-4 rounded-lg hover:bg-zinc-700 flex items-center gap-2 transition-all duration-300" style="color: var(--accent)">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm12-3H4a1 1 0 010-2h11a1 1 0 110 2zm0-5H4a1 1 0 010-2h11a1 1 0 110 2zM7 7H4a1 1 0 010-2h3a1 1 0 110 2z" clip-rule="evenodd"></path></svg>
+              Exportar CSV
+            </button>
+          </div>
+        </header>
+
+        <!-- Content Area for Tabs -->
+        <div id="content-area">
+          <!-- Dashboard Tab Content -->
+          <div id="dashboard-tab" class="tab-content space-y-8">
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div class="card p-6 rounded-xl border">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-medium">Orçamento Total</h3>
+                  <span id="total-orcamento-performance" class="flex items-center text-sm font-bold"></span>
+                </div>
+                <p id="total-orcamento" class="text-3xl font-bold mt-4" style="color: var(--text-primary)">R$ 0</p>
+              </div>
+              <div class="card p-6 rounded-xl border">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-medium">Depto. Maior Crescimento</h3>
+                  <span id="melhor-depto-performance" class="flex items-center text-sm font-bold text-green-500"></span>
+                </div>
+                <p id="maior-crescimento-dept" class="text-2xl font-bold mt-4" style="color: var(--text-primary)">Carregando...</p>
+              </div>
+              <div class="card p-6 rounded-xl border">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-medium">Média por Depto.</h3>
+                  <span id="media-performance" class="flex items-center text-sm font-bold"></span>
+                </div>
+                <p id="media-departamental" class="text-3xl font-bold mt-4" style="color: var(--text-primary)">R$ 0</p>
+              </div>
+              <div class="card p-6 rounded-xl border">
+                <h3 class="font-medium">Total de Departamentos</h3>
+                <p id="total-deptos" class="text-3xl font-bold mt-4" style="color: var(--text-primary)">0</p>
+              </div>
+            </section>
+
+            <section class="card p-4 md:p-6 rounded-2xl border">
+              <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                <h2 class="text-xl font-bold mb-4 md:mb-0" style="color: var(--text-primary)">Análise Comparativa Anual</h2>
+                <div id="chart-controls" class="flex flex-wrap justify-center gap-2 md:gap-3">
+                  <button data-type="bar" class="chart-btn active text-sm font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out border-2" style="border-color: var(--accent)">Barras</button>
+                  <button data-type="line" class="chart-btn text-sm font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out border-2" style="border-color: var(--accent)">Linha</button>
+                  <button data-type="radar" class="chart-btn text-sm font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out border-2" style="border-color: var(--accent)">Radar</button>
+                  <button data-type="pie" class="chart-btn text-sm font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out border-2" style="border-color: var(--accent)">Pizza</button>
+                </div>
+              </div>
+              <div class="relative h-96 w-full">
+                <canvas id="myChart"></canvas>
+              </div>
+            </section>
+          </div>
+
+          <!-- Simulator Tab Content -->
+          <div id="simulator-tab" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto card p-8 rounded-2xl border">
+              <h2 class="text-2xl font-bold mb-6" style="color: var(--text-primary)">Simulador de Investimento</h2>
+              <div class="space-y-6">
+                <div>
+                  <label for="investment-amount" class="block text-sm font-medium mb-2">Valor do Investimento (R$)</label>
+                  <input type="number" id="investment-amount" placeholder="Ex: 5000" class="w-full bg-zinc-900 border-zinc-600 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400 outline-none" style="color: var(--text-primary); background-color: var(--bg); border-color: var(--border-color)" />
+                </div>
+                <div>
+                  <label for="department-select" class="block text-sm font-medium mb-2">Investir em</label>
+                  <select id="department-select" class="w-full bg-zinc-900 border-zinc-600 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400 outline-none" style="color: var(--text-primary); background-color: var(--bg); border-color: var(--border-color)"></select>
+                </div>
+                <button id="simulate-btn" class="w-full font-bold py-3 rounded-lg hover:opacity-90 transition duration-300" style="background-color: var(--accent); color: var(--accent-text)">Simular Retorno</button>
+              </div>
+              <div id="simulation-result" class="mt-8 pt-6 border-t text-center hidden" style="border-color: var(--border-color)">
+                <p>Retorno Projetado (ROI)</p>
+                <p id="roi-value" class="text-5xl font-bold text-green-500 my-2">R$ 0,00</p>
+                <p class="text-xs">Simulação baseada em performance histórica. Retornos passados não garantem resultados futuros.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reports Tab Content -->
+          <div id="reports-tab" class="tab-content hidden">
+            <section class="card p-4 md:p-6 rounded-2xl border">
+              <h2 class="text-xl font-bold mb-4" style="color: var(--text-primary)">Relatórios Detalhados por Departamento</h2>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="border-b" style="border-color: var(--border-color)">
+                    <tr>
+                      <th class="p-3">Departamento</th>
+                      <th class="p-3 text-right">Orçamento Atual (mil R$)</th>
+                      <th class="p-3 text-right">Ano Anterior (mil R$)</th>
+                      <th class="p-3 text-right">Variação (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reports-table-body" class="divide-y" style="border-color: var(--border-color)">
+                    <!-- Data will be loaded here -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <!-- Profile Tab Content -->
+          <div id="profile-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div class="lg:col-span-1 card p-8 rounded-2xl border flex flex-col items-center text-center">
+                <div class="w-32 h-32 rounded-full bg-gray-700 mb-4 flex items-center justify-center">
+                  <svg class="w-20 h-20 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <h3 id="profile-name" class="text-2xl font-bold" style="color: var(--text-primary)"></h3>
+                <p id="profile-email" class="text-sm"></p>
+                <div class="text-xs mt-4 space-y-1">
+                  <p id="profile-member-since"></p>
+                  <p id="profile-last-login"></p>
+                </div>
+              </div>
+              <div class="lg:col-span-2 space-y-8">
+                <div class="card p-8 rounded-2xl border">
+                  <h3 class="text-xl font-bold mb-6" style="color: var(--text-primary)">Preferências</h3>
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-medium" style="color: var(--text-primary)">Tema da Interface</p>
+                        <p class="text-sm">Alterne entre os temas claro e escuro.</p>
+                      </div>
+                      <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="theme-toggle" id="theme-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" />
+                        <label for="theme-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"><span class="toggle-ball absolute inset-y-0 left-0 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out"></span></label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card p-8 rounded-2xl border">
+                  <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary)">Segurança</h3>
+                  <form id="change-password-form" class="space-y-4">
+                    <input
+                      id="old-password"
+                      type="password"
+                      placeholder="Senha Antiga"
+                      required
+                      class="w-full bg-zinc-900 border-zinc-600 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400 outline-none"
+                      style="color: var(--text-primary); background-color: var(--bg); border-color: var(--border-color)"
+                    />
+                    <input
+                      id="new-password"
+                      type="password"
+                      placeholder="Nova Senha"
+                      required
+                      class="w-full bg-zinc-900 border-zinc-600 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400 outline-none"
+                      style="color: var(--text-primary); background-color: var(--bg); border-color: var(--border-color)"
+                    />
+                    <button type="submit" class="font-semibold py-2 px-4 rounded-lg" style="background-color: var(--accent); color: var(--accent-text)">Alterar Senha</button>
+                  </form>
+                </div>
+                <div class="card p-8 rounded-2xl border border-red-500/30">
+                  <h3 class="text-xl font-bold text-red-400 mb-4">Zona de Perigo</h3>
+                  <p class="text-sm mb-4">Esta ação não pode ser desfeita. Isto irá permanentemente deletar sua conta e todos os dados associados.</p>
+                  <button id="delete-account-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">Deletar Conta</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Elements Cache ---
+        const els = {
+          authScreen: document.getElementById("auth-screen"),
+          app: document.getElementById("app"),
+          loginView: document.getElementById("login-view"),
+          registerView: document.getElementById("register-view"),
+          loginForm: document.getElementById("login-form"),
+          registerForm: document.getElementById("register-form"),
+          showRegisterBtn: document.getElementById("show-register-btn"),
+          showLoginBtn: document.getElementById("show-login-btn"),
+          logoutBtn: document.getElementById("logout-btn"),
+          welcomeMessage: document.getElementById("welcome-message"),
+          pageTitle: document.getElementById("page-title"),
+          lastUpdated: document.getElementById("last-updated"),
+          contentArea: document.getElementById("content-area"),
+          sidebarLinks: document.querySelectorAll(".sidebar-link"),
+          toastContainer: document.getElementById("toast-container"),
+          exportPdfBtn: document.getElementById("export-pdf"),
+          exportCsvBtn: document.getElementById("export-csv"),
+          pdfIcon: document.getElementById("pdf-icon"),
+          pdfSpinner: document.getElementById("pdf-spinner"),
+          pdfButtonText: document.getElementById("pdf-button-text"),
+          investmentAmount: document.getElementById("investment-amount"),
+          departmentSelect: document.getElementById("department-select"),
+          simulateBtn: document.getElementById("simulate-btn"),
+          simulationResult: document.getElementById("simulation-result"),
+          roiValue: document.getElementById("roi-value"),
+          yearSelect: document.getElementById("year-select"),
+          chartButtons: document.querySelectorAll(".chart-btn"),
+          reportsTableBody: document.getElementById("reports-table-body"),
+          profileName: document.getElementById("profile-name"),
+          profileEmail: document.getElementById("profile-email"),
+          profileMemberSince: document.getElementById("profile-member-since"),
+          profileLastLogin: document.getElementById("profile-last-login"),
+          themeToggle: document.getElementById("theme-toggle"),
+          changePasswordForm: document.getElementById("change-password-form"),
+          deleteAccountBtn: document.getElementById("delete-account-btn"),
+        };
+
+        // --- Mock Data ---
+        const mockDatabase = {
+          years: {
+            2025: { current: [130, 100, 75, 160, 50, 85], previous: [120, 95, 70, 150, 45, 80], date: new Date("2025-01-15T10:00:00") },
+            2024: { current: [120, 95, 70, 150, 45, 80], previous: [110, 105, 65, 140, 55, 75], date: new Date("2024-01-20T09:30:00") },
+            2023: { current: [100, 90, 60, 130, 40, 70], previous: [95, 85, 58, 125, 42, 68], date: new Date("2023-01-10T11:00:00") },
+          },
+          labels: ["Vendas", "Marketing", "Suporte", "Desenvolvimento", "RH", "Financeiro"],
+          departmentROIs: { Vendas: 0.15, Marketing: 0.12, Suporte: 0.05, Desenvolvimento: 0.2, RH: 0.02, Financeiro: 0.08 },
+        };
+
+        // --- UI Functions ---
+        function showToast(message, type = "success") {
+          const toast = document.createElement("div");
+          const bgColor = type === "success" ? "bg-green-500" : "bg-red-500";
+          toast.className = `toast ${bgColor} text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-md mb-2 opacity-0 transform translate-y-2`;
+          toast.textContent = message;
+          els.toastContainer.appendChild(toast);
+          setTimeout(() => toast.classList.remove("opacity-0", "translate-y-2"), 10);
+          setTimeout(() => {
+            toast.classList.add("opacity-0", "translate-y-2");
+            toast.addEventListener("transitionend", () => toast.remove());
+          }, 3000);
+        }
+
+        // --- Theme Manager ---
+        const ThemeManager = {
+          applyTheme: (theme) => {
+            if (theme === "light") {
+              document.body.classList.add("light-mode");
+              els.themeToggle.checked = true;
+            } else {
+              document.body.classList.remove("light-mode");
+              els.themeToggle.checked = false;
+            }
+          },
+          init: () => {
+            const savedTheme = localStorage.getItem("dashboard_theme") || "dark";
+            ThemeManager.applyTheme(savedTheme);
+            els.themeToggle.addEventListener("change", () => {
+              const newTheme = els.themeToggle.checked ? "light" : "dark";
+              localStorage.setItem("dashboard_theme", newTheme);
+              ThemeManager.applyTheme(newTheme);
+              // Force chart redraw with new theme colors
+              const activeChartType = document.querySelector(".chart-btn.active")?.dataset.type || "bar";
+              createOrUpdateChart(activeChartType, els.yearSelect.value);
+            });
+          },
+        };
+        ThemeManager.init();
+
+        // --- Auth Logic (Local Storage Simulation) ---
+        const Auth = {
+          getUsers: () => JSON.parse(localStorage.getItem("dashboard_users") || "[]"),
+          updateUser: (updatedUser) => {
+            let users = Auth.getUsers();
+            users = users.map((u) => (u.email === updatedUser.email ? updatedUser : u));
+            localStorage.setItem("dashboard_users", JSON.stringify(users));
+          },
+          saveUser: (user) => {
+            const users = Auth.getUsers();
+            users.push(user);
+            localStorage.setItem("dashboard_users", JSON.stringify(users));
+          },
+          findUser: (email) => Auth.getUsers().find((u) => u.email === email),
+          getSession: () => JSON.parse(sessionStorage.getItem("dashboard_session")),
+          setSession: (user) => {
+            user.lastLogin = new Date().toISOString();
+            Auth.updateUser(user);
+            sessionStorage.setItem("dashboard_session", JSON.stringify(user));
+          },
+          clearSession: () => sessionStorage.removeItem("dashboard_session"),
+        };
+
+        function showView(view) {
+          if (view === "register") {
+            els.loginView.classList.add("hidden");
+            els.registerView.classList.remove("hidden");
+          } else {
+            els.loginView.classList.remove("hidden");
+            els.registerView.classList.add("hidden");
+          }
+        }
+
+        let currentUser = null;
+        function showApp(user) {
+          currentUser = user;
+          els.authScreen.classList.add("hidden");
+          els.app.classList.remove("hidden");
+          els.welcomeMessage.textContent = `Olá, ${user.name.split(" ")[0]}! Bem-vindo(a) de volta.`;
+          initializeApp();
+        }
+
+        // --- App Initialization ---
+        let myChart;
+        function initializeApp() {
+          setupTabs();
+          els.yearSelect.value = "2024";
+          updateDashboardData();
+        }
+
+        // --- Chart Logic ---
+        function getDynamicChartOptions() {
+          const computedStyles = getComputedStyle(document.body);
+          return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom", labels: { color: computedStyles.getPropertyValue("--text-secondary").trim() } },
+              tooltip: {
+                backgroundColor: computedStyles.getPropertyValue("--card-bg").trim(),
+                titleColor: computedStyles.getPropertyValue("--accent").trim(),
+                bodyColor: computedStyles.getPropertyValue("--text-primary").trim(),
+                callbacks: { label: (ctx) => `${ctx.dataset.label}: R$ ${Number(ctx.raw).toLocaleString("pt-BR")} mil` },
+              },
+            },
+            scales: {
+              y: { beginAtZero: true, grid: { color: "rgba(250, 204, 21, 0.05)" }, ticks: { color: computedStyles.getPropertyValue("--text-secondary").trim() } },
+              x: { grid: { display: false }, ticks: { color: computedStyles.getPropertyValue("--text-secondary").trim() } },
+              r: {
+                grid: { color: "rgba(250, 204, 21, 0.1)" },
+                pointLabels: { color: computedStyles.getPropertyValue("--text-primary").trim() },
+                ticks: { display: false, backdropColor: "transparent" },
+              },
+            },
+          };
+        }
+
+        function createOrUpdateChart(type, year) {
+          const { current, previous } = mockDatabase.years[year];
+          const labels = mockDatabase.labels;
+          const computedStyles = getComputedStyle(document.body);
+
+          const data = {
+            labels: labels,
+            datasets: [
+              { label: "Orçamento Atual (mil R$)", data: current, backgroundColor: "rgba(250, 204, 21, 0.7)", borderColor: computedStyles.getPropertyValue("--accent").trim(), borderWidth: 2, tension: 0.3, fill: false },
+              { label: "Ano Anterior (mil R$)", data: previous, backgroundColor: "rgba(107, 114, 128, 0.5)", borderColor: "#6B7280", borderWidth: 2, tension: 0.3, fill: false },
+            ],
+          };
+
+          const options = getDynamicChartOptions();
+
+          if (type === "pie" || type === "doughnut") {
+            data.datasets = [
+              {
+                label: "Orçamento Atual (mil R$)",
+                data: current,
+                backgroundColor: labels.map((_, i) => `hsl(45, 90%, ${75 - i * 5}%)`),
+                borderColor: computedStyles.getPropertyValue("--card-bg").trim(),
+                borderWidth: 2,
+              },
+            ];
+            delete options.scales.x;
+            delete options.scales.y;
+            delete options.scales.r;
+          } else if (type === "radar") {
+            data.datasets[0].fill = true;
+            data.datasets[1].fill = true;
+            delete options.scales.x;
+            delete options.scales.y;
+          } else {
+            delete options.scales.r;
+          }
+
+          if (myChart) myChart.destroy();
+          const ctx = document.getElementById("myChart").getContext("2d");
+          myChart = new Chart(ctx, { type, data, options });
+        }
+
+        els.chartButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            els.chartButtons.forEach((btn) => btn.classList.remove("active"));
+            button.classList.add("active");
+            createOrUpdateChart(button.dataset.type, els.yearSelect.value);
+          });
+        });
+
+        // --- Central Data Update Function ---
+        function updateDashboardData() {
+          const selectedYear = els.yearSelect.value;
+          const { current, previous, date } = mockDatabase.years[selectedYear];
+          const labels = mockDatabase.labels;
+
+          els.lastUpdated.textContent = `Última atualização: ${date.toLocaleString("pt-BR")}`;
+
+          const totalCurrent = current.reduce((s, v) => s + v, 0);
+          const totalPrevious = previous.reduce((s, v) => s + v, 0);
+          document.getElementById("total-orcamento").textContent = `R$ ${totalCurrent.toLocaleString("pt-BR")} mil`;
+          updatePerformanceIndicator("total-orcamento-performance", totalCurrent, totalPrevious);
+
+          const avgCurrent = totalCurrent / current.length;
+          const avgPrevious = totalPrevious / previous.length;
+          document.getElementById("media-departamental").textContent = `R$ ${avgCurrent.toFixed(2).replace(".", ",")} mil`;
+          updatePerformanceIndicator("media-performance", avgCurrent, avgPrevious);
+
+          let maxGrowth = -Infinity;
+          let bestDept = "N/A";
+          let bestDeptPerf = 0;
+          labels.forEach((label, i) => {
+            const growth = (current[i] - previous[i]) / (previous[i] || 1);
+            if (growth > maxGrowth) {
+              maxGrowth = growth;
+              bestDept = label;
+              bestDeptPerf = growth;
+            }
+          });
+          document.getElementById("maior-crescimento-dept").textContent = bestDept;
+          document.getElementById("melhor-depto-performance").textContent = `+${(bestDeptPerf * 100).toFixed(1)}%`;
+
+          document.getElementById("total-deptos").textContent = labels.length;
+
+          els.reportsTableBody.innerHTML = "";
+          labels.forEach((label, i) => {
+            const change = ((current[i] - previous[i]) / (previous[i] || 1)) * 100;
+            els.reportsTableBody.innerHTML += `<tr class="hover:bg-zinc-700/50">
+                        <td class="p-3 font-medium">${label}</td>
+                        <td class="p-3 text-right font-semibold">R$ ${current[i].toLocaleString("pt-BR")}</td>
+                        <td class="p-3 text-right">R$ ${previous[i].toLocaleString("pt-BR")}</td>
+                        <td class="p-3 text-right font-bold ${change >= 0 ? "text-green-500" : "text-red-500"}">${change >= 0 ? "+" : ""}${change.toFixed(1)}%</td>
+                    </tr>`;
+          });
+
+          const activeChartType = document.querySelector(".chart-btn.active")?.dataset.type || "bar";
+          createOrUpdateChart(activeChartType, selectedYear);
+
+          els.departmentSelect.innerHTML = "";
+          labels.forEach((label) => (els.departmentSelect.innerHTML += `<option value="${label}">${label}</option>`));
+
+          if (currentUser) {
+            els.profileName.textContent = currentUser.name;
+            els.profileEmail.textContent = currentUser.email;
+            els.profileMemberSince.textContent = `Membro desde: ${new Date(currentUser.memberSince).toLocaleDateString("pt-BR")}`;
+            els.profileLastLogin.textContent = `Último login: ${new Date(currentUser.lastLogin).toLocaleString("pt-BR")}`;
+          }
+        }
+
+        function updatePerformanceIndicator(elementId, current, previous) {
+          const element = document.getElementById(elementId);
+          if (!element) return;
+          const change = ((current - previous) / (previous || 1)) * 100;
+          const arrowUp = `<svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"></path></svg>`;
+          const arrowDown = `<svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"></path></svg>`;
+          element.innerHTML = change >= 0 ? `${arrowUp} +${change.toFixed(1)}%` : `${arrowDown} ${change.toFixed(1)}%`;
+          element.className = `flex items-center text-sm font-bold ${change >= 0 ? "text-green-500" : "text-red-500"}`;
+        }
+
+        function setupTabs() {
+          els.sidebarLinks.forEach((link) => {
+            link.addEventListener("click", (e) => {
+              e.preventDefault();
+              const tabId = link.dataset.tab;
+              els.sidebarLinks.forEach((l) => l.classList.remove("active"));
+              link.classList.add("active");
+              els.pageTitle.textContent = link.querySelector("span").textContent;
+              els.contentArea.querySelectorAll(".tab-content").forEach((tabContent) => {
+                tabContent.classList.add("hidden");
+              });
+              document.getElementById(`${tabId}-tab`).classList.remove("hidden");
+            });
+          });
+          document.querySelector('[data-tab="dashboard"]').click();
+        }
+
+        function exportCSV(year) {
+          const { current, previous } = mockDatabase.years[year];
+          const rows = [["Departamento", `Atual (${year} - mil R$)`, `Anterior (${year - 1} - mil R$)`, "Variação (%)"]];
+          mockDatabase.labels.forEach((label, i) => {
+            const change = ((current[i] - previous[i]) / (previous[i] || 1)) * 100;
+            rows.push([label, current[i], previous[i], change.toFixed(1)]);
+          });
+          const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `dados_financeiros_${year}.csv`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          showToast("Dados CSV exportados com sucesso!");
+        }
+        els.exportCsvBtn.addEventListener("click", () => exportCSV(els.yearSelect.value));
+
+        // --- PDF Export Logic ---
+        els.exportPdfBtn.addEventListener("click", async () => {
+          els.pdfIcon.classList.add("hidden");
+          els.pdfSpinner.classList.remove("hidden");
+          els.pdfButtonText.textContent = "Gerando...";
+          els.exportPdfBtn.disabled = true;
+
+          try {
+            const activeTabContent = document.querySelector(".tab-content:not(.hidden)");
+            if (!activeTabContent) throw new Error("Nenhum conteúdo ativo para exportar.");
+
+            const computedStyles = getComputedStyle(document.body);
+            const backgroundColor = computedStyles.getPropertyValue("--bg").trim();
+
+            const canvas = await html2canvas(activeTabContent, {
+              scale: 2,
+              backgroundColor: backgroundColor,
+              useCORS: true,
+            });
+            const imgData = canvas.toDataURL("image/png");
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasAspectRatio = canvas.width / canvas.height;
+
+            const margin = 40;
+            let imgWidth = pdfWidth - margin;
+            let imgHeight = imgWidth / canvasAspectRatio;
+
+            if (imgHeight > pdfHeight - margin) {
+              imgHeight = pdfHeight - margin;
+              imgWidth = imgHeight * canvasAspectRatio;
+            }
+
+            const xPos = (pdfWidth - imgWidth) / 2;
+            const yPos = (pdfHeight - imgHeight) / 2;
+
+            pdf.addImage(imgData, "PNG", xPos, yPos, imgWidth, imgHeight);
+            const activeTab = document.querySelector(".sidebar-link.active")?.dataset.tab || "relatorio";
+            pdf.save(`relatorio_${activeTab}_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+            showToast("PDF exportado com sucesso!");
+          } catch (error) {
+            console.error("Erro ao exportar PDF:", error);
+            showToast("Falha ao exportar PDF.", "error");
+          } finally {
+            els.pdfIcon.classList.remove("hidden");
+            els.pdfSpinner.classList.add("hidden");
+            els.pdfButtonText.textContent = "Exportar PDF";
+            els.exportPdfBtn.disabled = false;
+          }
+        });
+
+        els.yearSelect.addEventListener("change", updateDashboardData);
+        els.showRegisterBtn.addEventListener("click", () => showView("register"));
+        els.showLoginBtn.addEventListener("click", () => showView("login"));
+        els.logoutBtn.addEventListener("click", () => {
+          Auth.clearSession();
+          window.location.reload();
+        });
+
+        els.registerForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const name = document.getElementById("reg-name").value;
+          const email = document.getElementById("reg-email").value;
+          const password = document.getElementById("reg-password").value;
+          if (Auth.findUser(email)) return showToast("Este email já está cadastrado.", "error");
+          Auth.saveUser({ name, email, password, memberSince: new Date().toISOString() });
+          showToast("Conta criada com sucesso! Faça o login.");
+          showView("login");
+          els.registerForm.reset();
+        });
+
+        els.loginForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const email = document.getElementById("login-email").value;
+          const password = document.getElementById("login-password").value;
+          const user = Auth.findUser(email);
+          if (user && user.password === password) {
+            Auth.setSession(user);
+            showApp(user);
+          } else {
+            showToast("Email ou senha inválidos.", "error");
+          }
+          els.loginForm.reset();
+        });
+
+        els.simulateBtn.addEventListener("click", () => {
+          const amount = parseFloat(els.investmentAmount.value);
+          if (isNaN(amount) || amount <= 0) {
+            showToast("Por favor, insira um valor de investimento válido.", "error");
+            return;
+          }
+          const department = els.departmentSelect.value;
+          const roiRate = mockDatabase.departmentROIs[department];
+          const returnValue = amount * roiRate;
+          els.roiValue.textContent = `R$ ${returnValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          els.simulationResult.classList.remove("hidden");
+        });
+
+        els.changePasswordForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const oldPass = document.getElementById("old-password").value;
+          const newPass = document.getElementById("new-password").value;
+          if (currentUser.password !== oldPass) {
+            return showToast("Senha antiga incorreta.", "error");
+          }
+          currentUser.password = newPass;
+          Auth.updateUser(currentUser);
+          Auth.setSession(currentUser);
+          showToast("Senha alterada com sucesso!");
+          els.changePasswordForm.reset();
+        });
+
+        els.deleteAccountBtn.addEventListener("click", () => {
+          showToast("Funcionalidade de deletar conta ainda não implementada.", "error");
+        });
+
+        const user = Auth.getSession();
+        if (user) showApp(user);
+        else {
+          els.authScreen.classList.remove("hidden");
+          els.app.classList.add("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>
